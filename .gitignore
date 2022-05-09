@@ -4,6 +4,10 @@
 /node_modules
 /.pnp
 .pnp.js
+.idea/
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
 
 # testing
 /coverage

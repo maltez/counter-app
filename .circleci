@@ -1,0 +1,54 @@
+version: 2.1
+orbs:
+  build: circleci/aws-ecr@7.3.0
+  terraform: ovotech/terraform-v2@2.4.10
+jobs:
+  terraform-plan:
+    executor: terraform/default
+    steps:
+    - checkout
+    - run:
+        name: Clone Git Repos
+        command: |
+          git clone git@github.com:maltez/counter-app.git
+    - terraform/plan:
+        path: .infra/terraform
+  terraform-deploy:
+    executor: terraform/default
+    steps:
+    - checkout
+    - run:
+        name: Clone Git Repos
+        command: |
+          git clone git@github.com:maltez/counter-app.git
+    - terraform/apply:
+        path: .infra/terraform
+        auto_approve: true
+workflows:
+  scheduled_build_deps_flow:
+      jobs:
+        - build-deps/build-and-push-image:
+            context: global
+            dockerfile: Dockerfile.deps
+            repo: react
+            tag: "latest"
+  react_flow:
+    jobs:
+      - build/build-and-push-image:
+            context: global
+            repo: react
+            tag: "${CIRCLE_SHA1}"
+            skip-when-tags-exist: true
+      - run-tests:
+          context: global
+      - terraform-plan:
+          context: terraform
+          requires:
+            - build/build-and-push-image
+      - hold-terraform-apply:
+          type: approval
+      - terraform-deploy:
+          context: terraform
+          requires:
+            - build/build-and-push-image
+            - hold-terraform-apply
